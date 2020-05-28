@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Latitude & Longitude</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+</head>
+
+<body>
+
+    <div id="root">
+        <div class="container h-100">
+            <h4 style="margin-top: 50px;margin-bottom: 10px;" class="text-center">You can Generate Random longitude &
+                Latitude</h4>
+            <div style="margin-bottom: 5px;" class="alert alert-warning p-1 text-center" role="alert">
+                You must allow Location Permission to generate from Nearby
+            </div>
+            <hr>
+            <div class="row">
+
+                <div class="col-8">
+                    <p style="margin: 0">How Many Location data you want ?</p>
+
+                    <form @submit.prevent="addMarkers" style="margin-bottom: 10px;" class="form-inline">
+                        <div class="form-group">
+                            <input type="number" v-on:keyup="InputValidation" class="form-control" v-model="count">
+                        </div>
+                        <button :disabled="!flag" type="submit" class="btn btn-sm btn-primary">Add
+                            Markers</button>
+                    </form>
+                    <google-map :center=center :zoom="9" style="width: 100%; height: 400px">
+                        <google-marker v-for="(m,index) in markers" :position="m.position" zoomControl: true, false
+                            :draggable="true" @dragend="UpdateMarkerPosition($event.latLng,index)" center="m.position">
+                        </google-marker>
+                    </google-map>
+                    <p style="font-style: italic;font-size: 13px;color: green;">* Drag and Drop Markers if you want
+                        custom data (Latitude & Longitude)
+                    </p>
+
+                    <p style="margin-top: 50px;" class="text-center">Click <a target="_blank"
+                            href="https://rathik.net">HERE</a> to get my all updates
+                    </p>
+                </div>
+                <div style="padding: 10px;background: #e3f2fd ;" class="col-4 card">
+                    <p> Postions Data </p>
+                    <vue-json-pretty v-if="markers.length != 0" ref="text" :deep="3" :data="markers">
+                    </vue-json-pretty>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="http://xkjyeah.github.io/vue-google-maps/vue-google-maps.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-json-pretty@1.6.3/vue-json-pretty.min.js"></script>
+    <script src="https://unpkg.com/vue-clipboard2/dist/vue-clipboard.js"></script>
+    <script>
+        Vue.use(VueGoogleMaps, {
+            load: {
+                key: 'AIzaSyAL1riTbssWzSBtySctopB9I8wY_OXk0og',
+                v: '3.26',
+            },
+            // Demonstrating how we can customize the name of the components
+            installComponents: false,
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            Vue.component('google-map', VueGoogleMaps.Map);
+            Vue.component('google-marker', VueGoogleMaps.Marker);
+            Vue.component('VueJsonPretty', VueJsonPretty.default);
+            Vue.use(VueClipboard);
+            new Vue({
+                el: '#root',
+                data: {
+                    //set a manual center 
+                    center: {
+                        lat: 23.6850,
+                        lng: 90.3563
+                    },
+                    //add longitute, lattitude data
+                    markers: [],
+                    //deafult 3places in input box
+                    count: 3,
+
+                    //if input box containts number & string
+                    flag: true,
+
+                },
+                methods: {
+                    //take Location Permission
+                    TakeLocationPermission: function () {
+                        if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(this.showPosition);
+                        } else {
+                            console.log("not permitted");
+                        }
+                    },
+                    showPosition: function (position) {
+                        let centerObj = {};
+                        centerObj.lat = position.coords.latitude;
+                        centerObj.lng = position.coords.longitude;
+                        this.center = centerObj;
+
+                        this.markers.push({
+                            position: {
+                                lat: this.center.lat,
+                                lng: this.center.lng
+                            }
+                        });
+
+
+                    },
+
+
+                    //Click to Genrate random points and push the array  markers
+                    generateRandomPoints: function (center, radius, count) {
+                        // var points = [];
+                        for (var i = 0; i < count; i++) {
+                            this.markers.push({
+                                position: this.generateRandomPoint(center, radius)
+
+                            });
+                        }
+                        // return points;
+                    },
+                    generateRandomPoint: function (center, radius) {
+                        var x0 = center.lng;
+                        var y0 = center.lat;
+                        // Convert Radius from meters to degrees.
+                        var rd = radius / 5000;
+
+                        var u = Math.random();
+                        var v = Math.random();
+
+                        var w = rd * Math.sqrt(u);
+                        var t = 2 * Math.PI * v;
+                        var x = w * Math.cos(t);
+                        var y = w * Math.sin(t);
+
+                        var xp = x / Math.cos(y0);
+
+                        // Resulting point.
+                        return {
+                            'lat': y + y0,
+                            'lng': xp + x0
+                        };
+                    },
+                    addMarkers: function () {
+                        this.markers = [];
+                        this.generateRandomPoints({
+                            'lat': this.center.lat,
+                            'lng': this.center.lng
+                        }, 1000, this.count);
+                    },
+
+                    //update markers poistion if user drag maker
+                    UpdateMarkerPosition: function (event, position) {
+                        position.lat = event.lat();
+                        position.lng = event.lng();
+                        this.markers[position].position.lat = event.lat();
+                        this.markers[position].position.lng = event.lng();
+
+
+                    },
+
+                    InputValidation: function () {
+                        if (this.count <= 0 && this.count != Number) {
+                            this.flag = false;
+                        } else {
+                            this.flag = true;
+                        }
+                    },
+                },
+                mounted() {
+                    this.TakeLocationPermission();
+                },
+            });
+        });
+    </script>
+    <style>
+        .vjs-tree {
+            font-size: 10px;
+        }
+
+        button {
+            margin: 10px;
+        }
+    </style>
+</body>
